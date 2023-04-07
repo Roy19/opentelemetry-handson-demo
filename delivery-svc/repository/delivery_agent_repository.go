@@ -38,7 +38,10 @@ func (s *DeliveryAgentRepository) CreateReservation(ctx context.Context) (uint, 
 	return deliveryAgentReservation.ID, nil
 }
 
-func (c *DeliveryAgentRepository) BookItem(reservationID int64, orderID string) error {
+func (c *DeliveryAgentRepository) BookItem(ctx context.Context, reservationID int64, orderID string) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "BookItem: book an item on db")
+	defer span.Finish()
+
 	txn := db.GetDBClient("delivery-svc").Model(&models.DeliveryAgentReservation{}).Begin()
 	var deliveryAgentReservation models.DeliveryAgentReservation
 	txn = txn.Raw(`select * from delivery_agent_reservations 
@@ -53,6 +56,7 @@ func (c *DeliveryAgentRepository) BookItem(reservationID int64, orderID string) 
 			where id = ?`, orderID, uint(reservationID))
 	if txn.Error != nil {
 		txn.Rollback()
+		span.SetTag("error", true)
 		return fmt.Errorf("failed to set lock on delivery agent reservation")
 	}
 	txn.Commit()

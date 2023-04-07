@@ -57,6 +57,17 @@ func initRoutes(mux *chi.Mux, controller *controllers.DeliveryAgentController) {
 		})
 
 		r.Post("/book", func(w http.ResponseWriter, r *http.Request) {
+			spanCtx, _ := tracer.Extract(
+				opentracing.HTTPHeaders,
+				opentracing.HTTPHeadersCarrier(r.Header),
+			)
+
+			span := tracer.StartSpan("POST /agent/reserve: reserve_delivery_agent",
+				opentracing.ChildOf(spanCtx))
+			defer span.Finish()
+
+			ctx := opentracing.ContextWithSpan(r.Context(), span)
+
 			var bookDeliveryAgent dto.BookDeliveryAgentDto
 			data, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -75,7 +86,11 @@ func initRoutes(mux *chi.Mux, controller *controllers.DeliveryAgentController) {
 				utils.Respond(w, http.StatusBadRequest, errorMessage)
 				return
 			}
-			err = controller.BookDeliveryAgent(bookDeliveryAgent.ReservationID, bookDeliveryAgent.OrderID)
+			err = controller.BookDeliveryAgent(
+				ctx,
+				bookDeliveryAgent.ReservationID,
+				bookDeliveryAgent.OrderID,
+			)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": err.Error(),

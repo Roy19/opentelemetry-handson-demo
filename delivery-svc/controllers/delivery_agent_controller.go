@@ -23,8 +23,12 @@ func (c *DeliveryAgentController) ReserveDeliveryAgent(ctx context.Context) (uin
 	return id, err
 }
 
-func (c *DeliveryAgentController) BookDeliveryAgent(reservationID int64, orderID string) error {
-	err := c.DeliveryAgentRepository.BookItem(reservationID, orderID)
+func (c *DeliveryAgentController) BookDeliveryAgent(ctx context.Context,
+	reservationID int64, orderID string) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "BookDeliveryAgent: book_delivery_agent")
+	defer span.Finish()
+
+	err := c.DeliveryAgentRepository.BookItem(ctx, reservationID, orderID)
 	if err != nil {
 		log.Printf("[ERROR] Failed to book the item")
 	}
