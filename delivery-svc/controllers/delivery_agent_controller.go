@@ -13,7 +13,8 @@ type DeliveryAgentController struct {
 }
 
 func (c *DeliveryAgentController) ReserveDeliveryAgent(ctx context.Context) (uint, error) {
-	span, _ := opentracing.StartSpanFromContext(ctx, "ReserveDeliveryAgent: reserve_delivery_agent")
+	span, _ := opentracing.StartSpanFromContext(ctx,
+		"DeliveryAgentController.ReserveDeliveryAgent: reserve_delivery_agent")
 	defer span.Finish()
 
 	id, err := c.DeliveryAgentRepository.CreateReservation(ctx)
@@ -25,7 +26,8 @@ func (c *DeliveryAgentController) ReserveDeliveryAgent(ctx context.Context) (uin
 
 func (c *DeliveryAgentController) BookDeliveryAgent(ctx context.Context,
 	reservationID int64, orderID string) error {
-	span, _ := opentracing.StartSpanFromContext(ctx, "BookDeliveryAgent: book_delivery_agent")
+	span, _ := opentracing.StartSpanFromContext(ctx,
+		"DeliveryAgentController.BookDeliveryAgent: book_delivery_agent")
 	defer span.Finish()
 
 	err := c.DeliveryAgentRepository.BookItem(ctx, reservationID, orderID)
