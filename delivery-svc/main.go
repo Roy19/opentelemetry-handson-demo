@@ -16,6 +16,7 @@ import (
 	"github.com/Roy19/distributed-transaction-2pc/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 )
 
 var (
@@ -36,7 +37,7 @@ func initRoutes(mux *chi.Mux, controller *controllers.DeliveryAgentController) {
 			)
 
 			span := tracer.StartSpan("POST /agent/reserve: reserve_delivery_agent",
-				opentracing.ChildOf(spanCtx))
+				ext.RPCServerOption(spanCtx))
 			defer span.Finish()
 
 			ctx := opentracing.ContextWithSpan(r.Context(), span)
@@ -63,7 +64,7 @@ func initRoutes(mux *chi.Mux, controller *controllers.DeliveryAgentController) {
 			)
 
 			span := tracer.StartSpan("POST /agent/book: book_delivery_agent",
-				opentracing.ChildOf(spanCtx))
+				ext.RPCServerOption(spanCtx))
 			defer span.Finish()
 
 			ctx := opentracing.ContextWithSpan(r.Context(), span)
