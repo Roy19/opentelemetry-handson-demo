@@ -72,7 +72,7 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 				opentracing.HTTPHeadersCarrier(r.Header),
 			)
 
-			span := tracer.StartSpan("GET /store/item/{itemID}: reserve_item",
+			span := tracer.StartSpan("POST /store/item/{itemID}/reserve: reserve_item",
 				opentracing.ChildOf(spanCtx),
 			)
 			defer span.Finish()
@@ -110,7 +110,7 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 				opentracing.HTTPHeadersCarrier(r.Header),
 			)
 
-			span := tracer.StartSpan("GET /store/item/{itemID}: reserve_item",
+			span := tracer.StartSpan("POST /store/item/{itemID}/book: book_item",
 				opentracing.ChildOf(spanCtx),
 			)
 			defer span.Finish()

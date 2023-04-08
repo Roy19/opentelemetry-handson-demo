@@ -62,7 +62,7 @@ func initRoutes(mux *chi.Mux, controller *controllers.DeliveryAgentController) {
 				opentracing.HTTPHeadersCarrier(r.Header),
 			)
 
-			span := tracer.StartSpan("POST /agent/reserve: reserve_delivery_agent",
+			span := tracer.StartSpan("POST /agent/book: book_delivery_agent",
 				opentracing.ChildOf(spanCtx))
 			defer span.Finish()
 
