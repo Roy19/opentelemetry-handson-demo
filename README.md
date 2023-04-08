@@ -20,3 +20,7 @@ go run main.go
 cd order-svc
 go run main.go
 ```
+
+### Communication of the application
+
+![Communication of the application](./static-assets/communication-flow.png)
