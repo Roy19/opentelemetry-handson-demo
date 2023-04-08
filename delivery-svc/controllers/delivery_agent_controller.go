@@ -17,7 +17,9 @@ func (c *DeliveryAgentController) ReserveDeliveryAgent(ctx context.Context) (uin
 		"DeliveryAgentController.ReserveDeliveryAgent: reserve_delivery_agent")
 	defer span.Finish()
 
-	id, err := c.DeliveryAgentRepository.CreateReservation(ctx)
+	id, err := c.DeliveryAgentRepository.CreateReservation(
+		opentracing.ContextWithSpan(ctx, span),
+	)
 	if err != nil {
 		log.Printf("[ERROR] Failed to create a reservation on that item\n")
 	}
@@ -30,7 +32,8 @@ func (c *DeliveryAgentController) BookDeliveryAgent(ctx context.Context,
 		"DeliveryAgentController.BookDeliveryAgent: book_delivery_agent")
 	defer span.Finish()
 
-	err := c.DeliveryAgentRepository.BookItem(ctx, reservationID, orderID)
+	err := c.DeliveryAgentRepository.BookItem(opentracing.ContextWithSpan(ctx, span),
+		reservationID, orderID)
 	if err != nil {
 		log.Printf("[ERROR] Failed to book the item")
 	}

@@ -16,7 +16,8 @@ func (c *StoreController) GetItem(ctx context.Context, itemID int64) error {
 	span, _ := opentracing.StartSpanFromContext(ctx, "StoreController.GetItem: get_item_availability")
 	defer span.Finish()
 
-	_, err := c.StoreRepository.GetItem(ctx, itemID)
+	_, err := c.StoreRepository.GetItem(opentracing.ContextWithSpan(ctx, span),
+		itemID)
 	if err != nil {
 		log.Printf("[ERROR] Failed to get item from db\n")
 	}
@@ -27,7 +28,8 @@ func (c *StoreController) ReserveItem(ctx context.Context, itemID int64) (uint, 
 	span, _ := opentracing.StartSpanFromContext(ctx, "StoreController.ReserveItem: reserve_item")
 	defer span.Finish()
 
-	id, err := c.StoreRepository.CreateReservation(ctx, itemID)
+	id, err := c.StoreRepository.CreateReservation(opentracing.ContextWithSpan(ctx, span),
+		itemID)
 	if err != nil {
 		log.Printf("[ERROR] Failed to create a reservation on that item\n")
 	}
@@ -38,7 +40,8 @@ func (c *StoreController) BookItem(ctx context.Context, reservationID int64, ord
 	span, _ := opentracing.StartSpanFromContext(ctx, "StoreController.BookItem: book_item")
 	defer span.Finish()
 
-	err := c.StoreRepository.BookItem(ctx, reservationID, orderID)
+	err := c.StoreRepository.BookItem(opentracing.ContextWithSpan(ctx, span),
+		reservationID, orderID)
 	if err != nil {
 		log.Printf("[ERROR] Failed to book the item")
 	}
