@@ -13,8 +13,14 @@ import (
 	"github.com/Roy19/distributed-transaction-2pc/store-svc/dto"
 	"github.com/Roy19/distributed-transaction-2pc/store-svc/models"
 	"github.com/Roy19/distributed-transaction-2pc/store-svc/repository"
+	distributedTracer "github.com/Roy19/distributed-transaction-2pc/tracer"
 	"github.com/Roy19/distributed-transaction-2pc/utils"
 	"github.com/go-chi/chi/v5"
+	"github.com/opentracing/opentracing-go"
+)
+
+var (
+	tracer opentracing.Tracer
 )
 
 func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
@@ -24,16 +30,29 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 
 	mux.Route("/store/item/{itemID}", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			spanCtx, _ := tracer.Extract(
+				opentracing.HTTPHeaders,
+				opentracing.HTTPHeadersCarrier(r.Header),
+			)
+
+			span := tracer.StartSpan("GET /store/item/{itemID}: get_item_availability",
+				opentracing.ChildOf(spanCtx),
+			)
+			defer span.Finish()
+
+			ctx := opentracing.ContextWithSpan(r.Context(), span)
+
 			itemID := chi.URLParam(r, "itemID")
 			itemIDAsInt, err := strconv.ParseInt(itemID, 10, 64)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": "itemID is required",
 				}
+				span.SetTag("error", true)
 				utils.Respond(w, http.StatusBadRequest, errorMessage)
 				return
 			}
-			err = controller.GetItem(itemIDAsInt)
+			err = controller.GetItem(ctx, itemIDAsInt)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": err.Error(),
@@ -48,16 +67,29 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 		})
 
 		r.Post("/reserve", func(w http.ResponseWriter, r *http.Request) {
+			spanCtx, _ := tracer.Extract(
+				opentracing.HTTPHeaders,
+				opentracing.HTTPHeadersCarrier(r.Header),
+			)
+
+			span := tracer.StartSpan("GET /store/item/{itemID}: reserve_item",
+				opentracing.ChildOf(spanCtx),
+			)
+			defer span.Finish()
+
+			ctx := opentracing.ContextWithSpan(r.Context(), span)
+
 			itemID := chi.URLParam(r, "itemID")
 			itemIDAsInt, err := strconv.ParseInt(itemID, 10, 64)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": "itemID is required",
 				}
+				span.SetTag("error", true)
 				utils.Respond(w, http.StatusBadRequest, errorMessage)
 				return
 			}
-			id, err := controller.ReserveItem(itemIDAsInt)
+			id, err := controller.ReserveItem(ctx, itemIDAsInt)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": err.Error(),
@@ -73,12 +105,25 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 		})
 
 		r.Post("/book", func(w http.ResponseWriter, r *http.Request) {
+			spanCtx, _ := tracer.Extract(
+				opentracing.HTTPHeaders,
+				opentracing.HTTPHeadersCarrier(r.Header),
+			)
+
+			span := tracer.StartSpan("GET /store/item/{itemID}: reserve_item",
+				opentracing.ChildOf(spanCtx),
+			)
+			defer span.Finish()
+
+			ctx := opentracing.ContextWithSpan(r.Context(), span)
+
 			itemID := chi.URLParam(r, "itemID")
 			_, err := strconv.ParseInt(itemID, 10, 64)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": "itemID is required",
 				}
+				span.SetTag("error", true)
 				utils.Respond(w, http.StatusBadRequest, errorMessage)
 				return
 			}
@@ -100,7 +145,7 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 				utils.Respond(w, http.StatusBadRequest, errorMessage)
 				return
 			}
-			err = controller.BookItem(bookItem.ReservationID, bookItem.OrderID)
+			err = controller.BookItem(ctx, bookItem.ReservationID, bookItem.OrderID)
 			if err != nil {
 				errorMessage := map[string]any{
 					"error": err.Error(),
@@ -117,9 +162,19 @@ func initRoutes(mux *chi.Mux, controller *controllers.StoreController) {
 	})
 }
 
+func initDistributedTracer() opentracing.Tracer {
+	tracer, err := distributedTracer.GetTracer("store-svc", os.Getenv("JAEGER_AGENT_HOST"))
+	if err != nil {
+		log.Fatal("failed to initialize tracer")
+	}
+	opentracing.SetGlobalTracer(tracer)
+	return tracer
+}
+
 func initDependencies() *controllers.StoreController {
 	store_dsn := os.Getenv("STORE_DSN")
 	db.InitDB(store_dsn, "store-svc")
+	tracer = initDistributedTracer()
 	db.MigrateModels("store-svc", models.StoreItem{}, models.StoreItemReservation{})
 	db.PutDummyDataStoreSvc("store-svc")
 	return &controllers.StoreController{
