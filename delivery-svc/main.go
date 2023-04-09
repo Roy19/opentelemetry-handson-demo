@@ -121,6 +121,7 @@ func initDependencies() *controllers.DeliveryAgentController {
 	store_dsn := os.Getenv("DELIVERY_DSN")
 	db.InitDB(store_dsn, "delivery-svc")
 	tracer = initDistributedTracer()
+	opentracing.SetGlobalTracer(tracer)
 	db.MigrateModels("delivery-svc", models.DeliveryAgentReservation{})
 	db.PutDummyDataDeliveryAgent("delivery-svc")
 	return &controllers.DeliveryAgentController{

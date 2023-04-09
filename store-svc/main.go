@@ -176,6 +176,7 @@ func initDependencies() *controllers.StoreController {
 	store_dsn := os.Getenv("STORE_DSN")
 	db.InitDB(store_dsn, "store-svc")
 	tracer = initDistributedTracer()
+	opentracing.SetGlobalTracer(tracer)
 	db.MigrateModels("store-svc", models.StoreItem{}, models.StoreItemReservation{})
 	db.PutDummyDataStoreSvc("store-svc")
 	return &controllers.StoreController{
