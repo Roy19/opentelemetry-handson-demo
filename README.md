@@ -21,6 +21,12 @@ cd order-svc
 go run main.go
 ```
 
-### Communication of the application
+Finally run,
+
+```bash
+$ curl -X POST http://localhost:8082/order -d @create_order.json
+```
+
+### Communication of various application components
 
 ![Communication of the application](./static-assets/communication-flow.png)
