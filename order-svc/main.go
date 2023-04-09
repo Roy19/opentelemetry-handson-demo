@@ -27,12 +27,14 @@ func createOrder() string {
 }
 
 func coordinator(ctx context.Context, itemID int) {
-	span, _ := opentracing.StartSpanFromContext(ctx, "coordinator")
-	defer span.Finish()
-
+	span, _ := opentracing.StartSpanFromContext(ctx, "coordinator: get_item_availability from store_svc")
 	req, _ := http.NewRequestWithContext(ctx, "GET",
 		"http://localhost:8080/store/item/"+strconv.Itoa(itemID), nil)
-
+	span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
+	)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println("Error fetching item from store-svc: ", err)
@@ -42,12 +44,19 @@ func coordinator(ctx context.Context, itemID int) {
 		log.Println("Error fetching item from store-svc: ", resp.StatusCode)
 		span.SetTag("error", true)
 	}
+	span.Finish()
 
 	// reserve item
+	span, _ = opentracing.StartSpanFromContext(ctx, "coordinator: reserve_item in store_svc")
 	req, _ = http.NewRequestWithContext(ctx,
 		"POST",
 		"http://localhost:8080/store/item/"+strconv.Itoa(itemID)+"/reserve",
 		nil,
+	)
+	span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
 	)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -65,12 +74,19 @@ func coordinator(ctx context.Context, itemID int) {
 		log.Println("Error decoding item reservation response: ", err)
 		span.SetTag("error", true)
 	}
+	span.Finish()
 
 	// reserve delivery agent
+	span, _ = opentracing.StartSpanFromContext(ctx, "coordinator: reserver_delivery_agent in delivery_svc")
 	req, _ = http.NewRequestWithContext(ctx,
 		"POST",
 		"http://localhost:8081/agent/reserve",
 		nil,
+	)
+	span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
 	)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -87,11 +103,13 @@ func coordinator(ctx context.Context, itemID int) {
 		log.Println("Error decoding delivery agent reservation response: ", err)
 		span.SetTag("error", true)
 	}
+	span.Finish()
 
 	// create order
 	orderID := createOrder()
 
 	// book store item
+	span, _ = opentracing.StartSpanFromContext(ctx, "coordinator: book_item in store_svc")
 	itemBooking := dto.ItemBookingDto{
 		OrderID:       orderID,
 		ReservationID: itemReservationDto.ReservationID,
@@ -103,6 +121,11 @@ func coordinator(ctx context.Context, itemID int) {
 		"http://localhost:8080/store/item/"+strconv.Itoa(itemID)+"/book",
 		toSend,
 	)
+	span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
+	)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println("Error booking item from store-svc: ", err)
@@ -112,8 +135,10 @@ func coordinator(ctx context.Context, itemID int) {
 		log.Println("Error booking item from store-svc: ", resp.StatusCode)
 		span.SetTag("error", true)
 	}
+	span.Finish()
 
 	// book delivery agent
+	span, _ = opentracing.StartSpanFromContext(ctx, "coordinator: book_delivery_agent in delivery_svc")
 	deliveryAgentBooking := dto.DeliveryAgentBookingDto{
 		OrderID:       orderID,
 		ReservationID: deliveryReservationDto.ReservationID,
@@ -125,6 +150,11 @@ func coordinator(ctx context.Context, itemID int) {
 		"http://localhost:8081/agent/book",
 		toSend,
 	)
+	span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(req.Header),
+	)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println("Error booking delivery agent from delivery-svc: ", err)
@@ -134,6 +164,7 @@ func coordinator(ctx context.Context, itemID int) {
 		log.Println("Error booking delivery agent from delivery-svc: ", resp.StatusCode)
 		span.SetTag("error", true)
 	}
+	span.Finish()
 
 	log.Printf("Order %s created\n", orderID)
 }
